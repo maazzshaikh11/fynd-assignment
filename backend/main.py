@@ -20,14 +20,21 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Configuration
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
-DATA_FILE = "submissions.json"
+DATA_FILE = "/tmp/submissions.json"
 
-openai_client = OpenAI(
-    base_url="https://openrouter.ai/api/v1",
-    api_key=OPENROUTER_API_KEY,
-)
+openai_client = None
+
+def get_openai_client():
+    global openai_client
+    if openai_client is None:
+        if not OPENROUTER_API_KEY:
+            raise RuntimeError("OPENROUTER_API_KEY not set")
+        openai_client = OpenAI(
+            base_url="https://openrouter.ai/api/v1",
+            api_key=OPENROUTER_API_KEY,
+        )
+    return openai_client
 
 # Data Models
 class ReviewSubmission(BaseModel):
@@ -95,7 +102,8 @@ Respond warmly and professionally in 50-80 words, acknowledging their feedback a
 Response:"""
     
     try:
-        response = openai_client.chat.completions.create(
+        client = get_openai_client()
+        response = client.chat.completions.create(
             model="google/gemini-2.0-flash-exp:free",
             messages=[{"role": "user", "content": prompt}],
             temperature=0.7
@@ -113,7 +121,8 @@ def generate_ai_summary(review: str) -> str:
 Summary:"""
     
     try:
-        response = openai_client.chat.completions.create(
+        client = get_openai_client()
+        response = client.chat.completions.create(
             model="google/gemini-2.0-flash-exp:free",
             messages=[{"role": "user", "content": prompt}],
             temperature=0.5
